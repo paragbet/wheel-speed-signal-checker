@@ -26,6 +26,11 @@ target_include_directories(wheel_speed_csv PUBLIC ${PROJECT_SOURCE_DIR})
 target_compile_features(wheel_speed_csv PUBLIC cxx_std_17)
 wheel_speed_configure_target(wheel_speed_csv)
 
+add_library(wheel_speed_checker STATIC wheel_speed_checker.cpp)
+target_include_directories(wheel_speed_checker PUBLIC ${PROJECT_SOURCE_DIR})
+target_compile_features(wheel_speed_checker PUBLIC cxx_std_17)
+wheel_speed_configure_target(wheel_speed_checker)
+
 enable_testing()
 
 add_executable(wheel_speed_csv_tests tests/wheel_speed_csv_tests.cpp)
@@ -40,3 +45,9 @@ add_test(
         ${PROJECT_SOURCE_DIR}/samples/normal.csv
         ${PROJECT_SOURCE_DIR}/tests/fixtures/invalid.csv
 )
+
+add_executable(wheel_speed_checker_tests tests/wheel_speed_checker_tests.cpp)
+target_link_libraries(wheel_speed_checker_tests PRIVATE wheel_speed_checker)
+wheel_speed_configure_target(wheel_speed_checker_tests)
+
+add_test(NAME wheel_speed_checker_tests COMMAND wheel_speed_checker_tests)
