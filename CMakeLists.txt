@@ -31,8 +31,14 @@ target_include_directories(wheel_speed_checker PUBLIC ${PROJECT_SOURCE_DIR})
 target_compile_features(wheel_speed_checker PUBLIC cxx_std_17)
 wheel_speed_configure_target(wheel_speed_checker)
 
-# The application uses the reader and the checker.
-target_link_libraries(wheel_speed_check PRIVATE wheel_speed_csv wheel_speed_checker)
+add_library(speed_limit STATIC speed_limit.cpp)
+target_include_directories(speed_limit PUBLIC ${PROJECT_SOURCE_DIR})
+target_compile_features(speed_limit PUBLIC cxx_std_17)
+wheel_speed_configure_target(speed_limit)
+
+# The application uses the reader, the checker, and the limit parser.
+target_link_libraries(wheel_speed_check PRIVATE
+    wheel_speed_csv wheel_speed_checker speed_limit)
 
 enable_testing()
 
@@ -55,6 +61,12 @@ wheel_speed_configure_target(wheel_speed_checker_tests)
 
 add_test(NAME wheel_speed_checker_tests COMMAND wheel_speed_checker_tests)
 
+add_executable(speed_limit_tests tests/speed_limit_tests.cpp)
+target_link_libraries(speed_limit_tests PRIVATE speed_limit)
+wheel_speed_configure_target(speed_limit_tests)
+
+add_test(NAME speed_limit_tests COMMAND speed_limit_tests)
+
 # Integration tests run the real program with command-line arguments.
 # Two tests are needed per case because PASS_REGULAR_EXPRESSION makes CTest
 # ignore the exit code: one test checks the exit code, the other the output.
@@ -65,6 +77,17 @@ add_test(NAME wheel_speed_check_summary
     COMMAND wheel_speed_check ${PROJECT_SOURCE_DIR}/samples/normal.csv)
 set_tests_properties(wheel_speed_check_summary PROPERTIES
     PASS_REGULAR_EXPRESSION "Samples checked: 3\nSamples over limit: 2"
+)
+
+# With a limit of 40, only the 42 km/h sample is over the limit.
+add_test(NAME wheel_speed_check_custom_limit_runs
+    COMMAND wheel_speed_check ${PROJECT_SOURCE_DIR}/samples/normal.csv 40)
+
+add_test(NAME wheel_speed_check_custom_limit_summary
+    COMMAND wheel_speed_check ${PROJECT_SOURCE_DIR}/samples/normal.csv 40)
+set_tests_properties(wheel_speed_check_custom_limit_summary PROPERTIES
+    PASS_REGULAR_EXPRESSION
+        "Over limit at 200 ms: 42 km/h\nSamples checked: 3\nSamples over limit: 1"
 )
 
 # Adds two tests for a case where wheel_speed_check must fail:
@@ -81,12 +104,20 @@ function(add_wheel_speed_check_failure_test name expected_message)
     )
 endfunction()
 
+# "[" and "]" are special characters in a regular expression, so they are
+# escaped with "\\" to match the literal text "[limit-kmh]".
+set(usage_message "Usage: wheel_speed_check <csv-file> \\[limit-kmh\\]")
+
 add_wheel_speed_check_failure_test(wheel_speed_check_no_file
-    "Usage: wheel_speed_check <csv-file>")
+    "${usage_message}")
 
 add_wheel_speed_check_failure_test(wheel_speed_check_too_many_arguments
-    "Usage: wheel_speed_check <csv-file>"
-    ${PROJECT_SOURCE_DIR}/samples/normal.csv extra)
+    "${usage_message}"
+    ${PROJECT_SOURCE_DIR}/samples/normal.csv 40 extra)
+
+add_wheel_speed_check_failure_test(wheel_speed_check_invalid_limit
+    "Error: speed limit 'fast' is not a number"
+    ${PROJECT_SOURCE_DIR}/samples/normal.csv fast)
 
 add_wheel_speed_check_failure_test(wheel_speed_check_missing_file
     "missing.csv: cannot open file"
