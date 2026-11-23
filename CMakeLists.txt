@@ -55,17 +55,39 @@ wheel_speed_configure_target(wheel_speed_checker_tests)
 
 add_test(NAME wheel_speed_checker_tests COMMAND wheel_speed_checker_tests)
 
-# Integration tests: run the real program from the repository root, because
-# main.cpp opens the relative path "samples/normal.csv".
-# Two tests are needed because PASS_REGULAR_EXPRESSION makes CTest ignore
-# the exit code: the first checks exit code 0, the second checks the totals.
-add_test(NAME wheel_speed_check_runs COMMAND wheel_speed_check)
-set_tests_properties(wheel_speed_check_runs PROPERTIES
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+# Integration tests run the real program with command-line arguments.
+# Two tests are needed per case because PASS_REGULAR_EXPRESSION makes CTest
+# ignore the exit code: one test checks the exit code, the other the output.
+add_test(NAME wheel_speed_check_runs
+    COMMAND wheel_speed_check ${PROJECT_SOURCE_DIR}/samples/normal.csv)
 
-add_test(NAME wheel_speed_check_summary COMMAND wheel_speed_check)
+add_test(NAME wheel_speed_check_summary
+    COMMAND wheel_speed_check ${PROJECT_SOURCE_DIR}/samples/normal.csv)
 set_tests_properties(wheel_speed_check_summary PROPERTIES
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     PASS_REGULAR_EXPRESSION "Samples checked: 3\nSamples over limit: 2"
 )
+
+# Adds two tests for a case where wheel_speed_check must fail:
+#   <name>_fails   passes if the exit code is non-zero (WILL_FAIL).
+#   <name>_message passes if the output contains expected_message.
+# Any arguments after expected_message (ARGN) are passed to the program.
+function(add_wheel_speed_check_failure_test name expected_message)
+    add_test(NAME ${name}_fails COMMAND wheel_speed_check ${ARGN})
+    set_tests_properties(${name}_fails PROPERTIES WILL_FAIL TRUE)
+
+    add_test(NAME ${name}_message COMMAND wheel_speed_check ${ARGN})
+    set_tests_properties(${name}_message PROPERTIES
+        PASS_REGULAR_EXPRESSION "${expected_message}"
+    )
+endfunction()
+
+add_wheel_speed_check_failure_test(wheel_speed_check_no_file
+    "Usage: wheel_speed_check <csv-file>")
+
+add_wheel_speed_check_failure_test(wheel_speed_check_too_many_arguments
+    "Usage: wheel_speed_check <csv-file>"
+    ${PROJECT_SOURCE_DIR}/samples/normal.csv extra)
+
+add_wheel_speed_check_failure_test(wheel_speed_check_missing_file
+    "missing.csv: cannot open file"
+    ${PROJECT_SOURCE_DIR}/samples/missing.csv)

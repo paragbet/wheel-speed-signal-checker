@@ -1,5 +1,6 @@
 #include <exception>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "wheel_speed_checker.hpp"
@@ -7,13 +8,23 @@
 
 using namespace std;
 
-int main()
+// argc is the number of command-line words, including the program name.
+// argv holds those words: argv[0] is the program name, argv[1] the first argument.
+int main(int argc, char* argv[])
 {
+    // Exactly one argument (the CSV path) is required. Checking argc first
+    // makes sure argv[1] exists before we read it.
+    if (argc != 2) {
+        cerr << "Usage: wheel_speed_check <csv-file>\n";
+        return 1;
+    }
+
+    const string csv_path = argv[1];
+
     // Any exception thrown inside this block (for example, a missing file
     // or an invalid CSV row) jumps to the catch block below.
     try {
-        // The path is relative, so run the program from the repository root.
-        const vector<WheelSpeedSample> samples = read_wheel_speed_csv("samples/normal.csv");
+        const vector<WheelSpeedSample> samples = read_wheel_speed_csv(csv_path);
 
         const WheelSpeedChecker checker(35.0);
         int samples_over_limit = 0;
