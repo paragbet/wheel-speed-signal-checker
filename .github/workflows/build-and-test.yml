@@ -1,0 +1,35 @@
+# Builds the project and runs all CTest tests on Linux for every pull
+# request to main and every push to main.
+name: C++ Build and Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# The workflow only needs to read the repository code.
+permissions:
+  contents: read
+
+jobs:
+  linux-build-test:
+    runs-on: ubuntu-24.04
+
+    # Use GCC so CI checks a different compiler than Apple Clang on macOS.
+    env:
+      CC: gcc
+      CXX: g++
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error
