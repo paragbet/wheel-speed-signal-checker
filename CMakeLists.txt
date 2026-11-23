@@ -31,6 +31,9 @@ target_include_directories(wheel_speed_checker PUBLIC ${PROJECT_SOURCE_DIR})
 target_compile_features(wheel_speed_checker PUBLIC cxx_std_17)
 wheel_speed_configure_target(wheel_speed_checker)
 
+# The application uses the reader and the checker.
+target_link_libraries(wheel_speed_check PRIVATE wheel_speed_csv wheel_speed_checker)
+
 enable_testing()
 
 add_executable(wheel_speed_csv_tests tests/wheel_speed_csv_tests.cpp)
@@ -51,3 +54,18 @@ target_link_libraries(wheel_speed_checker_tests PRIVATE wheel_speed_checker)
 wheel_speed_configure_target(wheel_speed_checker_tests)
 
 add_test(NAME wheel_speed_checker_tests COMMAND wheel_speed_checker_tests)
+
+# Integration tests: run the real program from the repository root, because
+# main.cpp opens the relative path "samples/normal.csv".
+# Two tests are needed because PASS_REGULAR_EXPRESSION makes CTest ignore
+# the exit code: the first checks exit code 0, the second checks the totals.
+add_test(NAME wheel_speed_check_runs COMMAND wheel_speed_check)
+set_tests_properties(wheel_speed_check_runs PROPERTIES
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+
+add_test(NAME wheel_speed_check_summary COMMAND wheel_speed_check)
+set_tests_properties(wheel_speed_check_summary PROPERTIES
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    PASS_REGULAR_EXPRESSION "Samples checked: 3\nSamples over limit: 2"
+)
